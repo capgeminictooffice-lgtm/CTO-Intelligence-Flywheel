@@ -14,15 +14,24 @@ import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunker";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-init API clients — module-load construction throws during Next.js build.
+let _anthropic: Anthropic | null = null;
+let _openai: OpenAI | null = null;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) _anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  return _anthropic;
+}
+function getOpenAI(): OpenAI {
+  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  return _openai;
+}
 
 async function generateContext(
   docTitle: string,
   preview: string,
   chunk: string
 ): Promise<string> {
-  const resp = await anthropic.messages.create({
+  const resp = await getAnthropic().messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 120,
     system:
@@ -42,7 +51,7 @@ async function generateContext(
 }
 
 async function embed(text: string): Promise<number[]> {
-  const resp = await openai.embeddings.create({
+  const resp = await getOpenAI().embeddings.create({
     model: "text-embedding-3-small",
     input: text,
   });

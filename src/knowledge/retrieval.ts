@@ -11,7 +11,16 @@ import "server-only";
 import OpenAI from "openai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Lazy-init — Next.js evaluates this module during `next build` to collect page
+// data, and constructing the OpenAI client at module scope throws if the env
+// var isn't available during the build step. Construct on first use instead.
+let _openai: OpenAI | null = null;
+function getOpenAI(): OpenAI {
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return _openai;
+}
 
 type RetrievedChunk = {
   id: number;
@@ -57,7 +66,7 @@ export async function retrieveContext(
   }
 
   try {
-    const embedResp = await openai.embeddings.create({
+    const embedResp = await getOpenAI().embeddings.create({
       model: "text-embedding-3-small",
       input: userMessage,
     });

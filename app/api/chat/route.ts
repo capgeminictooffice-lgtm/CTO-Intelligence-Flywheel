@@ -16,12 +16,18 @@ export const maxDuration = 300;
 
 const ANTHROPIC_BETAS = ["code-execution-2025-05-22", "files-api-2025-04-14"].join(",");
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  defaultHeaders: {
-    "anthropic-beta": ANTHROPIC_BETAS,
-  },
-});
+// Lazy-init — Next.js build collects page data by evaluating route modules;
+// constructing the SDK client at module scope risks a build-time throw.
+let _anthropic: Anthropic | null = null;
+function getAnthropic(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      defaultHeaders: { "anthropic-beta": ANTHROPIC_BETAS },
+    });
+  }
+  return _anthropic;
+}
 
 // Download a file produced by the code_execution sandbox via the Files API.
 async function downloadAnthropicFile(fileId: string): Promise<Buffer | null> {
@@ -182,7 +188,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const resp = anthropic.messages.stream({
+        const resp = getAnthropic().messages.stream({
           model,
           max_tokens: 8192,
           system: [
@@ -309,7 +315,7 @@ async function extractMemories(
 ) {
   try {
     const supabase = await createServerSupabase();
-    const result = await anthropic.messages.create({
+    const result = await getAnthropic().messages.create({
       model: FAST_MODEL,
       max_tokens: 1024,
       system:
