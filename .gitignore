@@ -1,3 +1,10 @@
+# Claude Code local settings (per-machine, not shared)
+.claude/
+
+# Reference PDFs — ingested into Supabase pgvector, not needed at runtime
+src/knowledge/sources/*.pdf
+src/knowledge/sources/*.PDF
+
 # Logs
 logs
 *.log
